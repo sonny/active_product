@@ -18,7 +18,14 @@ class ActiveProductGenerator < Rails::Generators::Base
     end
   end
 
-  def create_migration_file
-    migration_template 'migration.rb', 'db/migrate/active_product_base_migration.rb'
+  def create_products_base_migration
+    migration_template 'products_base_migration.rb', 
+    'db/migrate/active_product_products_base_migration.rb'
   end
+
+  def create_products_status_migration
+    migration_template 'products_status_migration.rb', 
+    'db/migrate/active_product_products_status_migration.rb'
+  end
+
 end
