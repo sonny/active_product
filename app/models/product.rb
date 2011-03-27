@@ -19,17 +19,21 @@
 #
 class Product < ActiveRecord::Base
   include ActiveProduct::Product::Unimplemented
+  include ActiveProduct::Product::Deprecated
 
+=begin
   has_many :product_option_types, :dependent => :destroy
   has_many :option_types, :through => :product_option_types
   has_many :product_properties, :dependent => :destroy
   has_many :properties, :through => :product_properties
   has_many :images, :as => :viewable, :order => :position, :dependent => :destroy
+=end
   has_and_belongs_to_many :product_groups
+=begin
   belongs_to :tax_category
   has_and_belongs_to_many :taxons
   belongs_to :shipping_category
-
+=end
   has_one :master,
     :class_name => 'Variant',
     :conditions => ["variants.is_master = ? AND variants.deleted_at IS NULL", true]
@@ -38,7 +42,8 @@ class Product < ActiveRecord::Base
   delegate_belongs_to :master, :cost_price if Variant.table_exists? && Variant.column_names.include?("cost_price")
 
   after_create :set_master_variant_defaults
-  after_create :add_properties_and_option_types_from_prototype
+#  after_create :add_properties_and_option_types_from_prototype
+#  before_create :ensure_master
   before_save :recalculate_count_on_hand
   after_save :update_memberships if ProductGroup.table_exists?
   after_save :set_master_on_hand_to_zero_when_product_has_variants
@@ -59,9 +64,8 @@ class Product < ActiveRecord::Base
     :conditions => ["variants.deleted_at IS NULL AND variants.is_master = ?", true],
     :dependent => :destroy
 
-
   validates :name, :price, :permalink, :presence => true
-
+=begin
   accepts_nested_attributes_for :product_properties, :allow_destroy => true, :reject_if => lambda { |pp| pp[:property_name].blank? }
 
   make_permalink if Product.respond_to? :make_permalink
@@ -97,46 +101,16 @@ class Product < ActiveRecord::Base
 
   scope :taxons_name_eq, lambda { |name| joins(:taxons).where("taxons.name = ?", name) }
 
-  # ----------------------------------------------------------------------------------------------------------
-  #
-  # The following methods are deprecated and will be removed in a future version of Spree
-  #
-  # ----------------------------------------------------------------------------------------------------------
-
-  def master_price
-    warn "[DEPRECATION] `Product.master_price` is deprecated.  Please use `Product.price` instead. (called from #{caller[0]})"
-    self.price
-  end
-
-  def master_price=(value)
-    warn "[DEPRECATION] `Product.master_price=` is deprecated.  Please use `Product.price=` instead. (called from #{caller[0]})"
-    self.price = value
-  end
-
-  def variants?
-    warn "[DEPRECATION] `Product.variants?` is deprecated.  Please use `Product.has_variants?` instead. (called from #{caller[0]})"
-    self.has_variants?
-  end
-
-  def variant
-    warn "[DEPRECATION] `Product.variant` is deprecated.  Please use `Product.master` instead. (called from #{caller[0]})"
-    self.master
-  end
-
-  # ----------------------------------------------------------------------------------------------------------
-  # end deprecation region
-  # ----------------------------------------------------------------------------------------------------------
-
   def to_param
     return permalink if permalink.present?
     name.to_url
   end
-
+=end
   # returns true if the product has any variants (the master variant is not a member of the variants array)
   def has_variants?
     !variants.empty?
   end
-
+=begin
   # returns the number of inventory units "on_hand" for this product
   def on_hand
     has_variants? ? variants.inject(0){|sum, v| sum + v.on_hand} : master.on_hand
@@ -226,7 +200,7 @@ class Product < ActiveRecord::Base
     where_str = fields.map{|field| Array.new(values.size, "products.#{field} #{like} ?").join(' OR ') }.join(' OR ')
     self.where([where_str, values.map{|value| "%#{value}%"} * fields.size].flatten)
   end
-
+=end
   private
 
   def recalculate_count_on_hand
@@ -239,7 +213,8 @@ class Product < ActiveRecord::Base
   # the master on_hand is meaningless once a product has variants as the inventory
   # units are now "contained" within the product variants
   def set_master_on_hand_to_zero_when_product_has_variants
-    master.on_hand = 0 if has_variants? && Spree::Config[:track_inventory_levels]
+    master.on_hand = 0 if has_variants? && 
+      ActiveProduct::Engine.config.track_inventory_levels
   end
 
   # ensures the master variant is flagged as such
@@ -256,4 +231,5 @@ class Product < ActiveRecord::Base
   def update_memberships
     self.product_groups = ProductGroup.all.select{|pg| pg.include?(self)}
   end
+
 end
