@@ -21,13 +21,24 @@ module ActiveProduct
         end
       end
 
-      argument :name
+      argument :table, :default => :all
+      argument :cust, :default => "base"
+
+      def self.tables
+        [:products, :vendibles]
+      end
 
       def create_migration 
-        # just naively use the migration template based on the name
-        # name - [base, status]
-        migration_template "products_#{name}_migration.rb", 
-        "db/migrate/active_product_products_#{name}_migration.rb"
+        # table - [product, vendibles]
+        # cust - [*:base, product:status]
+        tables = table == :all ? 
+        self.class.tables : 
+          [self.class.tables.detect { |t| t == table }].compact
+
+        tables.each do |t|
+          migration_template "#{t}_#{cust}_migration.rb", 
+          "db/migrate/active_product_#{t}_#{cust}_migration.rb"
+        end
       end
     end
   end

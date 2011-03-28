@@ -2,6 +2,9 @@
 require "active_product"
 require "rails"
 
+$:.unshift File.dirname(__FILE__)
+require "product/status"
+
 module ActiveProduct
   class Engine < Rails::Engine
     config.autoload_paths += %W(#{config.root}/lib/auto)
